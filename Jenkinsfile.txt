@@ -1,0 +1,143 @@
+pipeline {
+    agent {
+        node { label 'Dev-Agent' }
+    }
+
+    tools {
+        nodejs 'node16'
+    }
+
+    environment {
+        SCANNER_HOME = tool 'mysonar'
+    }
+
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Install Git') {
+            steps {
+                sh '''
+                    sudo yum install -y git
+                    echo "Displaying GIT Version"
+                    git --version
+                '''
+            }
+        }
+
+        stage('Clone Git Repo') {
+            steps {
+                sh '''
+                    rm -rf Camping-DevSecops-Project
+                    git clone https://github.com/Murali-Kaspa/Camping-DevSecops-Project.git
+                '''
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                dir('Camping-DevSecops-Project') {
+                    withSonarQubeEnv('mysonar') {
+                        sh '''
+                            $SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.projectKey=camp \
+                            -Dsonar.projectName=camp \
+                            -Dsonar.sources=.
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-scanner-id'
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('Camping-DevSecops-Project') {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Install Docker') {
+            steps {
+                sh '''
+                    sudo yum install -y docker
+                    echo "Docker Installed"
+                    sudo service docker start
+                    sudo systemctl enable docker
+                    sudo service docker status
+                    sudo usermod -aG docker $USER
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-creds') {
+                        sh '''
+                            cd Camping-DevSecops-Project
+                            sudo docker build -t campimage-1 .
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Install Trivy') {
+            steps {
+                sh '''
+                    sudo yum remove trivy -y
+                    wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.63.0_Linux-64bit.rpm
+                    sudo rpm -ivh trivy_0.63.0_Linux-64bit.rpm
+                    trivy --version
+                '''
+            }
+        }
+
+        stage('Scan Docker Image with Trivy') {
+            steps {
+                sh 'sudo trivy image campimage-1'
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: 'docker-creds', url: '']) {
+                        sh '''
+                            sudo docker tag campimage-1 muralikaspa1998/campimage-1:latest
+                            sudo docker push muralikaspa1998/campimage-1:latest
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Docker Container') {
+            steps {
+                sh 'docker run -d --name camping -p 1234:3000 muralikaspa1998/camp:mydockerimage'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Sending Slack Notification...'
+            slackSend(
+                channel: '#channel-name',
+                message: "*${currentBuild.currentResult}:* Job `${env.JOB_NAME}`\nBuild #${env.BUILD_NUMBER}\n<${env.BUILD_URL}|Click here for more info>"
+            )
+        }
+    }
+}
