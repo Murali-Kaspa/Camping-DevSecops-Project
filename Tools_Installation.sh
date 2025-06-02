@@ -6,6 +6,7 @@
 
 
 #!/bin/bash
+sudo -i
 
 #GITHUB
 sudo yum install git -y 
@@ -32,7 +33,7 @@ sudo usermod -aG docker $USER
 sleep 10 
 
 #Sonarube_Docker_Image
-docker run -itd --name sonar -p 9000:9000 sonarqube:lts-community
+docker run -itd --name sonarimage -p 9000:9000 sonarqube:lts-community
 
 #TRIVY 
 
@@ -45,7 +46,7 @@ sudo rpm -ivh trivy_0.63.0_Linux-64bit.rpm
 # 3. Verify installation
 trivy --version
 
-sleep 60
+sleep 20
 
 echo "Displaying Versions"
 
@@ -56,14 +57,14 @@ docker_version=$(docker --version)
 trivy_version=$(trivy --version)
 terraform_version=$(terraform version | head -n 1)
 
-echo "-------------------------------"
-echo "| Tool Name  | Version        |"
-echo "-------------------------------"
-echo "| Git        | $git_version   |"
-echo "| Jenkins    | $jenkins_version |"
-echo "| Docker     | $docker_version |"
-echo "| Trivy      | $trivy_version |"
-echo "| Terraform  | $terraform_version |"
-echo "-------------------------------"
+echo "-----------------------------------"
+echo "| Tool Name  | Version             |"
+echo "-----------------------------------"
+echo "| Git        | $git_version        |"
+echo "| Jenkins    | $jenkins_version    |"
+echo "| Docker     | $docker_version     |"
+echo "| Trivy      | $trivy_version      |"
+echo "| Terraform  | $terraform_version  |"
+echo "------------------------------------"
 
 
