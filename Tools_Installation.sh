@@ -6,7 +6,6 @@
 
 
 #!/bin/bash
-sudo -i
 
 #GITHUB
 sudo yum install git -y 
