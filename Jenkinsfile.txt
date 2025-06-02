@@ -4,11 +4,11 @@ pipeline {
     }
 
     tools {
-        nodejs 'node16'
+        nodejs 'nodejs16'
     }
 
     environment {
-        SCANNER_HOME = tool 'mysonar'
+        SCANNER_HOME = tool 'sonarscanner-application'
     }
 
     stages {
@@ -40,7 +40,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 dir('Camping-DevSecops-Project') {
-                    withSonarQubeEnv('mysonar') {
+                    withSonarQubeEnv('sonarscanner-application') {
                         sh '''
                             $SCANNER_HOME/bin/sonar-scanner \
                             -Dsonar.projectKey=camp \
@@ -55,7 +55,7 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-scanner-id'
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-scanner-token'
                 }
             }
         }
@@ -84,10 +84,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    withDockerRegistry(credentialsId: 'docker-creds') {
+                    withDockerRegistry(credentialsId: 'docker-credentials') {
                         sh '''
                             cd Camping-DevSecops-Project
-                            sudo docker build -t campimage-1 .
+                            sudo docker build -t dev-image .
                         '''
                     }
                 }
@@ -107,18 +107,20 @@ pipeline {
 
         stage('Scan Docker Image with Trivy') {
             steps {
-                sh 'sudo trivy image campimage-1'
+                sh 'sudo trivy image dev-image'
+            }
+        }
+        stage('Docker Tagging'){
+            steps{
+                sh 'sudo docker tag dev-image muralikaspa1998/campimage:latest'
             }
         }
 
         stage('Push Docker Image') {
             steps {
                 script {
-                    withDockerRegistry([credentialsId: 'docker-creds', url: '']) {
-                        sh '''
-                            sudo docker tag campimage-1 muralikaspa1998/campimage-1:latest
-                            docker push muralikaspa1998/campimage-1:latest
-                        '''
+                    withDockerRegistry(credentialsId: 'docker-credentials') {
+                        sh 'docker push muralikaspa1998/campimage:latest'
                     }
                 }
             }
@@ -126,7 +128,7 @@ pipeline {
 
         stage('Deploy Docker Container') {
             steps {
-                sh 'docker run -d --name camping -p 1234:3000 muralikaspa1998/camp:mydockerimage'
+                sh 'docker run -d --name campingapplication -p 1234:3000 muralikaspa1998/campimage:latest'
             }
         }
     }
@@ -135,7 +137,7 @@ pipeline {
         always {
             echo 'Sending Slack Notification...'
             slackSend(
-                channel: '#channel-name',
+                channel: 'my-colleagues',
                 message: "*${currentBuild.currentResult}:* Job `${env.JOB_NAME}`\nBuild #${env.BUILD_NUMBER}\n<${env.BUILD_URL}|Click here for more info>"
             )
         }
