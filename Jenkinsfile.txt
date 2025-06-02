@@ -117,7 +117,7 @@ pipeline {
                     withDockerRegistry([credentialsId: 'docker-creds', url: '']) {
                         sh '''
                             sudo docker tag campimage-1 muralikaspa1998/campimage-1:latest
-                            sudo docker push muralikaspa1998/campimage-1:latest
+                            docker push muralikaspa1998/campimage-1:latest
                         '''
                     }
                 }
