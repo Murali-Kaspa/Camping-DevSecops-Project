@@ -1,0 +1,63 @@
+#Added Jenkins Script for Docker and Sonarqube
+
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'nodejs16'
+    }
+
+    environment {
+        SCANNER_HOME = tool 'Sonar-Qube' //Tools > SonarQube Scanner Name
+    }
+
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Install Git') {
+            steps {
+                sh '''
+                    sudo yum install -y git
+                    git --version
+                '''
+            }
+        }
+
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Murali-Kaspa/Camping-DevSecops-Project.git'
+            }
+        }
+
+        stage('Install Docker') {
+            steps {
+                sh '''
+                    sudo yum install -y docker
+                    docker --version
+                    sudo systemctl enable docker
+                    sudo systemctl start docker
+                    sudo usermod -aG docker jenkins
+                '''
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                dir('Camping-DevSecops-Project') {
+                    withSonarQubeEnv('SonarQube') { //System SonarQube Server Name
+                        sh '''
+                            $SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.projectKey=camp \
+                            -Dsonar.projectName=camp \
+                            -Dsonar.sources=.
+                        '''
+                    }
+                }
+            }
+        }
+    }
+}
