@@ -37,10 +37,10 @@ docker run -itd --name sonarimage -p 9000:9000 sonarqube:lts-community
 #TRIVY 
 
 # 1. Download the latest RPM package
-wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.63.0_Linux-64bit.rpm
+wget https://github.com/aquasecurity/trivy/releases/download/v0.64.1/trivy_0.64.1_Linux-64bit.rpm
 
 # 2. Install the package
-sudo rpm -ivh trivy_0.63.0_Linux-64bit.rpm
+sudo rpm -ivh trivy_0.64.1_Linux-64bit.rpm
 
 # 3. Verify installation
 trivy --version
