@@ -1,3 +1,5 @@
+#IMAGENAME: muralikaspa1998/campimage	
+
 # Use Node 18 as parent image
 FROM node:18-alpine
 
